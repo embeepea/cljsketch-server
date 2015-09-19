@@ -3,15 +3,20 @@ var app = express();
 var bodyParser = require('body-parser');
 var fs = require('fs');
 
+var MongoClient = require('mongodb').MongoClient;
+
+var url = 'mongodb://localhost:27017/cljsketch';
+
+var db = undefined;
+
+MongoClient.connect(url, function(err, _db) {
+    db = _db;
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-//app.get('/', function (req, res) {
-//  res.send('Hello World!');
-//});
-
-//app.use("/cljsketch", express.static("/Users/mbp/cljsketch/resources/public"));
-app.use("/", express.static("/Users/mbp/cljsketch/resources/public"));
+app.use("/", express.static("../cljsketch/resources/public"));
 
 var user = "embeepea";
 
@@ -20,11 +25,39 @@ app.get('/who', function (req, res) {
 });
 
 app.post("/save-sketch", function(req, res) {
-    console.log('POST');
-    console.log(req.body);
-    //console.log(Object.keys(req));
-    //console.log(req);
-    res.send("OK\n");
+    db.collection("sketches").insertOne({
+        name: req.body.name,
+        sketch: req.body.sketch
+    }, function(err, result) {
+        if (err) {
+            console.log('insert error');
+            console.log(err);
+        } else {
+        }
+    });
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ status: "OK" }));
+});
+
+app.post("/list-sketches", function(req, res) {
+    var sketches = [];
+    db.collection("sketches")
+        .find()
+        .each(function(err, sketch) {
+            if (sketch) {
+                sketches.push(sketch.name);
+            } else {
+                res.setHeader('Content-Type', 'application/json');
+                res.send(JSON.stringify(sketches));
+            }
+        });
+});
+
+app.post("/get-sketch", function(req, res) {
+    db.collection("sketches").findOne({ name: req.body.name }, function(err,sketch) {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify(sketch.sketch));
+    });
 });
 
 //app.get(/cljsketch/, function(req, res) {
