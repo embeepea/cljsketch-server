@@ -124,21 +124,26 @@ app.get('/auth/google/callback',
 
 
 
+function current_user_obj(req) {
+    return {
+        name: req.user.displayName,
+        "auth-provider": "google",
+        id: req.user.id
+    };
+}
+
 app.get('/who', function (req, res) {
     res.setHeader('Content-Type', 'application/json');
     if (req.isAuthenticated()) {
-        res.send(JSON.stringify({
-            name: req.user.displayName,
-            'auth-provider': 'google',
-            id: req.user.id                      
-        }));
+        res.send(JSON.stringify(current_user_obj(req)));
     } else {
         res.send(JSON.stringify({}));
     }
 });
 
-app.post("/save-sketch", function(req, res) {
+app.post("/save-sketch", ensureAuthenticated, function(req, res) {
     db.collection("sketches").insertOne({
+        user: current_user_obj(req),
         name: req.body.name,
         sketch: req.body.sketch
     }, function(err, result) {
@@ -152,10 +157,11 @@ app.post("/save-sketch", function(req, res) {
     res.send(JSON.stringify({ status: "OK" }));
 });
 
-app.post("/list-sketches", function(req, res) {
+app.post("/list-sketches", ensureAuthenticated, function(req, res) {
     var sketches = [];
+    var user = current_user_obj(req);
     db.collection("sketches")
-        .find()
+        .find({ 'user.auth-provider': 'google', 'user.id': req.user.id })
         .each(function(err, sketch) {
             if (sketch) {
                 sketches.push(sketch.name);
@@ -166,8 +172,12 @@ app.post("/list-sketches", function(req, res) {
         });
 });
 
-app.post("/get-sketch", function(req, res) {
-    db.collection("sketches").findOne({ name: req.body.name }, function(err,sketch) {
+app.post("/get-sketch", ensureAuthenticated, function(req, res) {
+    db.collection("sketches").findOne({
+        name: req.body.name,
+        'user.auth-provider': 'google',
+        'user.id': req.user.id
+    }, function(err,sketch) {
         res.setHeader('Content-Type', 'application/json');
         res.send(JSON.stringify(sketch.sketch));
     });
