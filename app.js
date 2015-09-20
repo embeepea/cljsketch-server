@@ -28,7 +28,7 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new GoogleStrategy({
     clientID: google_credentials.GOOGLE_CLIENT_ID,
     clientSecret: google_credentials.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/callback",
+    callbackURL: google_credentials.GOOGLE_CALLBACK_URL,
     passReqToCallback   : false
   },
   function(accessToken, refreshToken, profile, done) {
@@ -68,7 +68,7 @@ app.use( session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/", express.static("../cljsketch/resources/public"));
+app.use("/", express.static(google_credentials.CLJSKETCH_PUBLIC));
 
 app.get('/login', function(req, res) {
     res.send("You must <a href='/auth/google'>login</a>.");
