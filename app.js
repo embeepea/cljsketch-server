@@ -2,26 +2,139 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var fs = require('fs');
-
 var MongoClient = require('mongodb').MongoClient;
+var passport = require('passport');
+var session = require( 'express-session' );
+var cookieParser  = require( 'cookie-parser' );
+var GoogleStrategy = require('passport-google-oauth2').Strategy;
+var google_credentials = require('./google-credentials');
 
 var url = 'mongodb://localhost:27017/cljsketch';
 
 var db = undefined;
 
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.deserializeUser(function(obj, done) {
+  done(null, obj);
+});
+
+// Use the GoogleStrategy within Passport.
+//   Strategies in Passport require a `verify` function, which accept
+//   credentials (in this case, an accessToken, refreshToken, and Google
+//   profile), and invoke a callback with a user object.
+passport.use(new GoogleStrategy({
+    clientID: google_credentials.GOOGLE_CLIENT_ID,
+    clientSecret: google_credentials.GOOGLE_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/callback",
+    passReqToCallback   : false
+  },
+  function(accessToken, refreshToken, profile, done) {
+    // asynchronous verification, for effect...
+    process.nextTick(function () {
+      // To keep the example simple, the user's Google profile is returned to
+      // represent the logged-in user.  In a typical application, you would want
+      // to associate the Google account with a user record in your database,
+      // and return that user instead.
+      return done(null, profile);
+    });
+  }
+));
+
+
 MongoClient.connect(url, function(err, _db) {
     db = _db;
 });
 
+app.use( cookieParser()); 
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use( session({ 
+    secret: 'cookie_secret',
+//    name:   'kaas',
+//    store:  new RedisStore({
+//        host: '127.0.0.1',
+//        port: 6379
+//        }),
+//    proxy:  true,
+    resave: true,
+    saveUninitialized: true
+}));
+
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use("/", express.static("../cljsketch/resources/public"));
 
-var user = "embeepea";
+app.get('/login', function(req, res) {
+    res.send("You must <a href='/auth/google'>login</a>.");
+});
+
+app.get('/logged-in', function(req, res) {
+    console.log(req.isAuthenticated());
+    console.log(req.user);
+    res.send("You are logged in as " + req.user.displayName + ".  <a href='/logout'>Log Out</a>");
+});
+
+app.get('/ltest', ensureAuthenticated, function(req, res) {
+    //console.log('ltest!');
+    //console.log(req.isAuthenticated());
+    console.log(req.user);
+    res.send("This is ltest");
+});
+
+app.get('/logout', function(req, res){
+  req.logout();
+  res.redirect('/');
+});
+
+
+// GET /auth/google
+//   Use passport.authenticate() as route middleware to authenticate the
+//   request.  The first step in Google authentication will involve
+//   redirecting the user to google.com.  After authorization, Google
+//   will redirect the user back to this application at /auth/google/callback
+app.get('/auth/google',
+        //passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login'] }),
+        //  passport.authenticate('google', { scope: ['https://accounts.google.com/o/oauth2/auth'] }),
+        passport.authenticate('google', { scope: ['profile'] }),
+
+  function(req, res){
+    // The request will be redirected to Google for authentication, so this
+    // function will not be called.
+  });
+
+// GET /auth/google/callback
+//   Use passport.authenticate() as route middleware to authenticate the
+//   request.  If authentication fails, the user will be redirected back to the
+//   login page.  Otherwise, the primary route function function will be called,
+//   which, in this example, will redirect the user to the home page.
+app.get('/auth/google/callback', 
+  passport.authenticate('google', {
+      failureRedirect: '/login',
+      successRedirect: '/'
+  }),
+  function(req, res) {
+    res.redirect('/');
+  });
+
+
 
 app.get('/who', function (req, res) {
-  res.send(user);
+    res.setHeader('Content-Type', 'application/json');
+    if (req.isAuthenticated()) {
+        res.send(JSON.stringify({
+            name: req.user.displayName,
+            'auth-provider': 'google',
+            id: req.user.id                      
+        }));
+    } else {
+        res.send(JSON.stringify({}));
+    }
 });
 
 app.post("/save-sketch", function(req, res) {
@@ -85,3 +198,29 @@ var server = app.listen(3000, function () {
 
   console.log('Example app listening at http://%s:%s', host, port);
 });
+
+function validate_user(user) {
+    return true;
+/*
+  if (user && user.emails && (user.emails[0].value === 'mbp@geomtech.com'
+                              || user.emails[0].value === 'andrea.fey@gmail.com'
+                              || user.emails[0].value === 'jrfrimme@unca.edu'
+                             )) {
+      return true;
+  } else {
+      return false;
+  }
+*/
+}
+
+// Simple route middleware to ensure user is authenticated.
+//   Use this route middleware on any resource that needs to be protected.  If
+//   the request is authenticated (typically via a persistent login session),
+//   the request will proceed.  Otherwise, the user will be redirected to the
+//   login page.
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated() && validate_user(req.user)) {
+      return next();
+  }
+  res.redirect('/login');
+}
