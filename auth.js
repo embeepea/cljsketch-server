@@ -30,8 +30,8 @@ module.exports = function(app) {
         callbackURL: google_credentials.GOOGLE_CALLBACK_URL,
         passReqToCallback   : true
     }, function(req, accessToken, refreshToken, profile, done) {
-console.log(req);
-console.log(req.headers.referer);
+        //console.log(req);
+        //console.log(req.headers.referer);
         // asynchronous verification, for effect...
         process.nextTick(function () {
             // To keep the example simple, the user's Google profile is returned to
@@ -140,15 +140,28 @@ console.log(req.headers.referer);
     });
 
     app.post("/save-sketch", ensureAuthenticated, function(req, res) {
-        db.collection("sketches").insertOne({
-            user: current_user_obj(req),
-            name: req.body.name,
-            sketch: req.body.sketch
-        }, function(err, result) {
-            if (err) {
-                console.log('insert error');
-                console.log(err);
+        db.collection("sketches").findOne({
+            'name': req.body.name,
+            'user.auth-provider': 'google',
+            'user.id': req.user.id
+        }, function(err,sketch) {
+            if (sketch) {
+                db.collection("sketches").update({'name': req.body.name,
+                                                  'user.auth-provider': 'google',
+                                                  'user.id': req.user.id},
+                                                 {$set: {sketch: req.body.sketch}});
             } else {
+                db.collection("sketches").insertOne({
+                    user: current_user_obj(req),
+                    name: req.body.name,
+                    sketch: req.body.sketch
+                }, function(err, result) {
+                    if (err) {
+                        console.log('insert error');
+                        console.log(err);
+                    } else {
+                    }
+                });
             }
         });
         res.setHeader('Content-Type', 'application/json');
