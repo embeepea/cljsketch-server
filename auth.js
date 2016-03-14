@@ -168,6 +168,16 @@ module.exports = function(app) {
         res.send(JSON.stringify({ status: "OK" }));
     });
 
+    app.post("/delete-sketch", ensureAuthenticated, function(req, res) {
+        db.collection("sketches").deleteOne({
+            'name': req.body.name,
+            'user.auth-provider': 'google',
+            'user.id': req.user.id
+        });
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify({ status: "OK" }));
+    });
+
     app.post("/list-sketches", ensureAuthenticated, function(req, res) {
         var sketches = [];
         var user = current_user_obj(req);
