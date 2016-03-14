@@ -17,7 +17,7 @@ if (process.argv.length > 3) {
 
 var app = express();
 
-app.use("/", express.static("../cljsketch/resources/public"));
+app.use("/", express.static(google_credentials.CLJSKETCH_PUBLIC));
 
 if (proxy_server) {
     console.log("proxying authenticated requests through " + proxy_server);

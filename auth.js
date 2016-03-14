@@ -27,11 +27,11 @@ module.exports = function(app) {
     passport.use(new GoogleStrategy({
         clientID: google_credentials.GOOGLE_CLIENT_ID,
         clientSecret: google_credentials.GOOGLE_CLIENT_SECRET,
-        callbackURL: "http://localhost:3000/auth/google/callback",
+        callbackURL: google_credentials.GOOGLE_CALLBACK_URL,
         passReqToCallback   : true
     }, function(req, accessToken, refreshToken, profile, done) {
 console.log(req);
-console.log(req.headers.host);
+console.log(req.headers.referer);
         // asynchronous verification, for effect...
         process.nextTick(function () {
             // To keep the example simple, the user's Google profile is returned to
