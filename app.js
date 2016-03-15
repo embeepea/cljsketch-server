@@ -10,12 +10,19 @@ var google_credentials = require('./google-credentials');
 
 var port = process.argv[2];
 
+var local_auth = false;
 var proxy_server = undefined;
+
 if (process.argv.length > 3) {
-    proxy_server = process.argv[3];
+    if (process.argv[3] === "local") {
+        local_auth = true;
+    } else {
+        proxy_server = process.argv[3];
+    }
 }
 
 var app = express();
+var auth;
 
 app.use("/", express.static(google_credentials.CLJSKETCH_PUBLIC));
 
@@ -24,7 +31,12 @@ if (proxy_server) {
     var proxy = require('./proxy.js');
     proxy(app, proxy_server);
 } else {
-    var auth = require('./auth.js');
+    if (local_auth) {
+        console.log("bypassing google auth to run local");
+        auth = require('./local-auth.js');
+    } else {
+        auth = require('./auth.js');
+    }
     auth(app);
 }
 

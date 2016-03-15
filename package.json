@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon ./app.js 3000",
+    "local": "nodemon ./app.js 3000 local",
     "start-proxy": "nodemon ./app.js 3000 sketch.geomtech.com"
   },
   "author": "",
