@@ -1,0 +1,18 @@
+#! /usr/bin/env node
+
+var MongoClient = require('mongodb').MongoClient;
+var assert = require('assert');
+
+var url = 'mongodb://localhost:27017/cljsketch';
+
+MongoClient.connect(url, function(err, db) {
+    var sketches = [];
+    db.collection("sketches").find({ }).each(function(err, sketch) {
+        if (sketch) {
+            sketches.push(sketch);
+        } else {
+            console.log(JSON.stringify(sketches));
+            db.close();
+        }
+    });
+});
