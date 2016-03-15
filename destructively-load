@@ -1,0 +1,18 @@
+#! /usr/bin/env node
+
+var MongoClient = require('mongodb').MongoClient;
+var fs = require('fs');
+
+var url = 'mongodb://localhost:27017/cljsketch';
+
+var sketches = JSON.parse(fs.readFileSync("/tmp/s.json"));
+
+MongoClient.connect(url, function(err, db) {
+
+    db.collection("sketches").deleteMany();
+    db.collection("sketches").insertMany(sketches, function(err, result) {
+      db.close();
+    });
+
+});
+
